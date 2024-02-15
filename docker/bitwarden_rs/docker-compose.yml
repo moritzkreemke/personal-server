@@ -1,0 +1,53 @@
+version: '3.7'
+
+services:
+  bitwarden_rs: 
+    image: vaultwarden/server:1.26.0
+    restart: always
+    networks: 
+      - traefik_net
+    volumes: 
+      - type: volume
+        source: bitwarden_data
+        target: /data
+    environment: 
+      WEBSOCKET_ENABLED: 'true' # Required to use websocket
+      SIGNUPS_ALLOWED: 'false'   # set to false to disable signups
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+    labels:
+      - "traefik.docker.network=traefik_net"
+      - "traefik.enable=true"
+      - traefik.http.middlewares.redirect-https.redirectScheme.scheme=https
+      - traefik.http.middlewares.redirect-https.redirectScheme.permanent=true
+      - traefik.http.routers.${SERVICE_NAME}-https.rule=Host(`${TRAEFIK_SUBDOMAIN}`)
+      - traefik.http.routers.${SERVICE_NAME}-https.entrypoints=websecure
+      - traefik.http.routers.${SERVICE_NAME}-https.tls=true
+      - traefik.http.routers.${SERVICE_NAME}-https.tls.certresolver=mytlschallenge
+      - traefik.http.routers.${SERVICE_NAME}-https.service=${SERVICE_NAME}
+      - traefik.http.routers.${SERVICE_NAME}-http.rule=Host(`${TRAEFIK_SUBDOMAIN}`)
+      - traefik.http.routers.${SERVICE_NAME}-http.entrypoints=web
+      - traefik.http.routers.${SERVICE_NAME}-http.middlewares=redirect-https
+      - traefik.http.routers.${SERVICE_NAME}-http.service=${SERVICE_NAME}
+      - traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=80
+      - traefik.http.routers.${SERVICE_NAME}-websocket-https.rule=Host(`${TRAEFIK_SUBDOMAIN}`) && Path(`/notifications/hub`)
+      - traefik.http.routers.${SERVICE_NAME}-websocket-https.entrypoints=websecure
+      - traefik.http.routers.${SERVICE_NAME}-websocket-https.tls=true
+      - traefik.http.routers.${SERVICE_NAME}-websocket-https.tls.certresolver=mytlschallenge
+      - traefik.http.routers.${SERVICE_NAME}-websocket-https.service=${SERVICE_NAME}-websocket
+      - traefik.http.routers.${SERVICE_NAME}-websocket-http.rule=Host(`${TRAEFIK_SUBDOMAIN}`) && Path(`/notifications/hub`)
+      - traefik.http.routers.${SERVICE_NAME}-websocket-http.entrypoints=web
+      - traefik.http.routers.${SERVICE_NAME}-websocket-http.middlewares=redirect-https
+      - traefik.http.routers.${SERVICE_NAME}-websocket-http.service=${SERVICE_NAME}-websocket
+      - traefik.http.services.${SERVICE_NAME}-websocket.loadbalancer.server.port=3012
+
+volumes: 
+  bitwarden_data: 
+    driver: local
+
+    
+networks:
+    traefik_net: 
+      driver: bridge
+      name: traefik_net
+
+
