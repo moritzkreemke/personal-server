@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: traefik:v2.9
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    command: 
+      - "--api.insecure=false"
+      - "--providers.docker"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.docker.exposedbydefault=false"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      - "--certificatesresolvers.mytlschallenge.acme.email=${TRAEFIK_TLS_MAIL}"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+    networks:
+      - web
+      - traefik_net
+    volumes:
+        - type: volume
+          source: traefik_data
+          target: "/letsencrypt"
+        - type: bind 
+          source: /var/run/docker.sock
+          target: /var/run/docker.sock
+
+
+volumes: 
+  traefik_data:
+    driver: local
+
+    
+networks:
+  default:
+    external:
+      name: web
+  web:
+    driver: bridge
+    name: web
+    external: true
+  traefik_net: 
+      name: traefik_net
+
+
