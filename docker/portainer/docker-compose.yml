@@ -1,0 +1,41 @@
+version: '3.7'
+
+services:
+  portainer:
+    image:  portainer/portainer-ce:2.16.0
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - 192.168.178.62:9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks: 
+      - traefik_net
+      - web
+    labels:
+    - "traefik.docker.network=traefik_net"  
+    - "traefik.enable=true"
+    - "traefik.http.routers.${SERVICE_NAME}HTTP.entrypoints=web"
+    - "traefik.http.routers.${SERVICE_NAME}HTTP.rule=Host(`${TRAEFIK_SUBDOMAIN}`)"
+    - "traefik.http.middlewares.route2https.redirectscheme.scheme=https"
+    - "traefik.http.routers.${SERVICE_NAME}HTTP.middlewares=route2https"
+    - "traefik.http.routers.${SERVICE_NAME}router0.rule=Host(`${TRAEFIK_SUBDOMAIN}`)"
+    - "traefik.http.routers.${SERVICE_NAME}router0.entrypoints=websecure"
+    - "traefik.http.routers.${SERVICE_NAME}router0.tls.certresolver=mytlschallenge"
+    - "traefik.http.services.${SERVICE_NAME}service.loadbalancer.server.port=9000"
+
+volumes:
+  portainer_data:
+
+networks:
+  default:
+    external:
+      name: web
+  traefik_net: 
+    external:
+      name: traefik_net
+  web: 
+    external: 
+      name: web
